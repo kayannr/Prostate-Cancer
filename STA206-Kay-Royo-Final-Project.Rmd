@@ -1,0 +1,1081 @@
+---
+title: "Prostate Cancer"
+author: "Kay Royo"
+date: "12/5/2021"
+output: 
+  rmdformats::material:
+    highlight: kate
+    self_contained: true
+    code_folding: show
+    thumbnails: true
+    gallery: true
+    fig_cap: true
+    df_print: kable
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#<link rel="stylesheet" href="mystyle.css"> 
+# Required packages
+library(knitr)
+library(ggplot2)
+```
+
+```{r knitr_init, echo=FALSE, cache=FALSE}
+#library(knitr)
+#library(rmdformats)
+
+#css: mystyle.css
+
+## Global options
+#options(max.print="75")
+#opts_chunk$set(echo=TRUE,
+	             #cache=TRUE,
+               #prompt=FALSE,
+               #tidy=TRUE,
+               #comment=NA,
+               #message=FALSE,
+               #warning=FALSE)
+#opts_knit$set(width=75)
+```
+
+```{r, include=FALSE}
+##Clear Compute Memory
+rm(list=ls())
+```
+
+
+# **Abstract**
+
+The objective of this project is to identify the association between prostate-specific antigen 
+(PSA) and a variety of prognostic clinical measurements in men with advanced prostate cancer. 
+Cancer volume, weight, age, benign prostatic hyperplasia, seminal vesicle invasion, capsular 
+penetration, and gleason score are the set of clinical measurements included in this analysis. A 
+variety of multiple linear regression models were investigated to identify the relationship 
+between PSA and these clinical measurements. Using some of the predictor variables mentioned, 
+a final linear regression model was developed in order to predict the level of PSA among men 
+diagnosed with prostate cancer. The result of the analysis reveals that cancer volume, benign 
+prostatic hyperplasia, and seminal vesicle invasion are useful factors in detecting the PSA level 
+in men with prostate cancer. This analysis uses a dataset collected from men with prostate cancer 
+and does not include any measurements on men who are not diagnosed with prostate cancer. 
+
+![https://www.lifelinecelltech.com/investigating-bpa-exposure-prostate-cancer-risk/](prostatecancer.jpg)
+
+
+
+# **Introduction**
+
+Prostate cancer is one of the most common causes of cancer-related deaths among men. In 
+the US, the American Cancer Society estimates approximately 248,530 new cases and 34,130 
+deaths from prostate cancer for 2021 (American Cancer Society, 2021). Additionally, there is a 
+high risk of prostate cancer in men. The American Cancer Society estimates that approximately 1 
+in 8 men will be diagnosed with prostate cancer and 1 in 41 men will die of prostate cancer. 
+
+<br>
+
+Prostate-specific antigen (PSA), an enzyme produced by the prostate, is commonly 
+recommended as a screening mechanism for detecting prostate cancer. In order to become an 
+efficient screening tool, it is important that we understand how PSA levels relate to factors that 
+may determine prognosis and outcome. However, PSA screening does not always guarantee 
+accurate results. In rare cases, some men with prostate cancer do not have an elevated PSA and 
+some men with high level of PSA do not have prostate cancer. Moreover, PSA levels can change 
+for variety of reasons other than cancer. Some of the other common causes of high PSA levels 
+include benign prostatic hyperplasia (BPH), urinary tract infection (UTI), and prostatitis 
+(prostate inflammation) (Whelan, 2017). Despite this, PSA level detection is still currently one of 
+the most helpful method used in prostate cancer diagnosis. 
+
+<br>
+
+The data used to analyze the relationship between PSA level and a number of prognostic 
+clinical measurements were collected on 97 men between ages 41 and 79 who were about to 
+undergo radical prostectomies (Stamey et al., 1989). The statistical analysis performed to analyze 
+this dataset involves conducting a series of multiple regression analyses used to determine the 
+best model predictor for PSA level in men who are diagnosed with prostate cancer using both 
+quantitative and qualitative clinical measurements included in the data. The other clinical 
+measurements included in the data aside from PSA level are commonly measured in men with 
+prostate cancer. 
+
+
+# **Methods and Results** 
+
+The goal of this analysis was to build a multiple regression model to predict the level of 
+PSA from a subset of predictors: cancer volume, prostate weight, patient age, benign prostatic hyperplasia, seminal vesicle invasion, capsular penetration, and gleason score. In order to reach 
+this goal, the project methodology was split into multiple parts. The relevant steps taken to 
+perform the analysis includes exploratory data analysis, model building, model selection, model 
+validation, and model diagnostics. 
+
+<br><br>
+
+## Part I: Exploratory Data Analysis
+
+The purpose of the exploratory data analysis is to investigate the data to be used in the 
+multiple regression analyses. The dataset does not include any missing values. Two variables 
+(seminal vesicle invasion and gleason score) are converted to categorical (qualitative) variables. Out of the 
+97 advanced prostate cancer cases in the dataset, about 78% do not have seminal vesicle invasion, 
+which suggests that the presence of seminal vesicle invasion does not imply prostate cancer is 
+present but it is positively correlated with PSA level. The relationships between the 
+quantitative variables does not show any obvious nonlinearity. The results reveal a high 
+correlation between PSA level and predictor variables such as cancer volume, and capsular 
+penetration. Since the PSA level have a severely right-skewed distribution as shown in Figure 3, it can be transformed 
+using a log transformation, which has similar effect to PSA’s distribution as the power 
+transformation of -0.1 suggested by the Box-cox log-likelihood procedure (Figure 5). The similar effect of log and power transformation is evident in Figure 6. Performing the log transformation increased the coefficient of determination $R^2$ of the first-order model 
+with all seven predictors. Additionally, exploring the dataset shows that PSA level increases 
+from low to high gleason score (high prognosis) and is weakly correlated with prostate weight 
+and patient age. 
+
+
+
+
+
+### Data Processing and Manipulation 
+
+```{r}
+##Read data into R
+data <- read.table("C:/Users/kayan/R-Projects/STA206/Project/data/prostate.txt", header=F)
+
+##Assign header names 
+names(data) = c("patient_id","psa_level","cancer_vol","weight", "age", "benign_prostatic_hyperplasia", "seminal_vesicle_invasion", "capsular_penetration", "gleason_score")
+
+##Convert data to dataframe
+data = as.data.frame(data)
+
+##View data
+library(DT)
+datatable(data, caption = 'Table 1: Prostate Cancer Data', rownames = FALSE,filter="top", options = list(pageLength = 10, autoWidth = TRUE, scrollX=F, columnDefs = list(list(width = '50px', targets = "_all"))))
+
+##Check summary statistic for each variable:
+data_summary<-as.data.frame(apply(data,2,summary))
+datatable(data_summary, caption = 'Table 2: Data Summary', rownames = TRUE, options = list(pageLength = 9, scrollX=F))
+
+##check for variable types 
+s <-sapply(data, class)
+data_types<-as.data.frame(s)
+datatable(data_types,  caption = 'Table 3: Data Types I', rownames = TRUE,colnames = "Type")
+
+##Check number of missing values for each variable
+n <-sapply(data, function(x) sum(is.na(x)))
+missing_<-as.data.frame(n)
+datatable(missing_,  caption = 'Table 4: Missing Values', rownames = TRUE,colnames = "NA")
+
+
+##Drop irrelevant variable: patient_id 
+drops=c("patient_id")
+prostate=data[,!(names(data)%in%drops)]
+
+##Change variables to categorical
+prostate$gleason_score <- as.factor(prostate$gleason_score) 
+prostate$seminal_vesicle_invasion <- as.factor(prostate$seminal_vesicle_invasion) 
+
+##recheck variable types 
+v <-sapply(prostate, class)
+data_types1<-as.data.frame(v)
+datatable(data_types1,  caption = 'Table 3: Data Types II', rownames = TRUE,colnames = "Type")
+```
+
+
+### DATA VISUALIZATION
+
+```{r, message=FALSE}
+##Pie charts (with class percentage) for seminal_vesicle_invasion
+#table(prostate$seminal_vesicle_invasion)
+#levels(prostate$seminal_vesicle_invasion)
+n <- nrow(prostate)
+library(plotly)
+svi <- data.frame("Seminal" = c("Absence", "Presence"), "Count" = c(76, 21))
+colors <- c('#FC8D62', "#8DA0CB")
+
+fig <- plot_ly(svi, labels = ~Seminal, values = ~Count, type = 'pie',
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        text = ~paste(Count),
+        marker = list(colors = colors,
+                      line = list(color = '#FFFFFF', width = 1)),
+                      #The 'pull' attribute can also be used to create space between the sectors
+        showlegend = FALSE)
+(fig <- fig %>% layout(title = 'Figure 1: Seminal Vesicle Invasion',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+```{r, fig.pos='h', fig.align='center'}
+##Pie charts (with class percentage) for gleason_score
+#table(prostate$gleason_score)
+#levels(prostate$gleason_score)
+gs <- data.frame("Gleason" = c("Bad Prognosis (6)","Worse Prognosis (7)", "Worst Prognosis (8)"), "count" = c(33 , 43, 21  ))
+colors <- c('#khaki', "palegreen", "plum")
+
+fig1 <- plot_ly(gs, labels = ~Gleason, values = ~count, type = 'pie',
+        textposition = 'inside',
+        textinfo = 'label+percent',
+        insidetextfont = list(color = '#FFFFFF'),
+        hoverinfo = 'text',
+        text = ~paste(count),
+        marker = list(colors = colors,
+                      line = list(color = '#FFFFFF', width = 1)),
+                      #The 'pull' attribute can also be used to create space between the sectors
+        showlegend = FALSE)
+(fig1 <- fig1 %>% layout(title = 'Figure 2: Gleason Score',
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE)))
+```
+
+
+```{r, fig.cap='Figure 3: Histograms of quantitative variables', fig.pos='h', fig.align='center'}
+
+##Histograms of each quantitative variable
+
+##function to combine plots in one panel
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+  numPlots = length(plots)
+  # If layout is NULL, then use 'cols' to determine layout
+  if (is.null(layout)) {
+    # Make the panel
+    # ncol: Number of columns of plots
+    # nrow: Number of rows needed, calculated from # of cols
+    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
+                    ncol = cols, nrow = ceiling(numPlots/cols))
+  }
+ if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    # Set up the page
+    grid.newpage()
+    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      # Get the i,j matrix positions of the regions that contain this subplot
+      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
+
+      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
+                                      layout.pos.col = matchidx$col))
+    }
+  }
+}
+
+#Plot 1 - PSA level
+library(ggplot2)
+ggp1 <- ggplot(prostate, aes(x = psa_level)) + xlab("PSA Level") +
+    geom_histogram(bins = 30, fill = "cornflowerblue", color = "white") +
+    geom_vline(xintercept=mean(prostate$psa_level), col="red", lwd=1.5) 
+#Plot 2 - Cancer Volume
+ggp2<-ggplot(prostate, aes(x = cancer_vol)) + xlab("Cancer Volume") +
+    geom_histogram(bins = 30, fill = "cornflowerblue", color = "white") +
+    geom_vline(xintercept=mean(prostate$cancer_vol), col="red", lwd=1.5)
+#Plot 3 - Weight
+ggp3<-ggplot(prostate, aes(x = weight)) + xlab("Weight") +
+    geom_histogram(bins = 30, fill = "cornflowerblue", color = "white") +
+    geom_vline(xintercept=mean(prostate$weight), col="red", lwd=1.5)
+#Plot 4 - age
+ggp4<-ggplot(prostate, aes(x = age)) + xlab("Age") +
+    geom_histogram(bins = 30, fill = "cornflowerblue", color = "white") +
+    geom_vline(xintercept=mean(prostate$age), col="red", lwd=1.5)
+#Plot 5 - Benign prostatic Hyperplasia
+ggp5<-ggplot(prostate, aes(x = benign_prostatic_hyperplasia)) + xlab("Benign Prostatic Hyperplasia") +
+    geom_histogram(bins = 30, fill = "cornflowerblue", color = "white") +
+    geom_vline(xintercept=mean(prostate$benign_prostatic_hyperplasia), col="red", lwd=1.5)
+#Plot 6 - Capsular Penetration
+ggp6<-ggplot(prostate, aes(x = capsular_penetration)) + xlab("Capsular Penetration") +
+    geom_histogram(bins = 30, fill = "cornflowerblue", color = "white") +
+    geom_vline(xintercept=mean(prostate$capsular_penetration), col="red", lwd=1.5)
+
+myplots <- list(ggp1, ggp2, ggp3, ggp4, ggp5, ggp6) 
+multiplot(plotlist = myplots, cols = 3)
+```
+
+
+```{r, message=FALSE, warning=FALSE, fig.cap='Figure 4', fig.pos='h', fig.align='center'}
+##Transform PSA level to eliminate right skewed distribution shown in Figure 3 
+
+##Box-cox transformation
+fit1<-lm(psa_level~., data=prostate) #first-order model with the (non-transformed) variables
+par(mfrow=c(2,2))
+plot(fit1,pch =20, cex = 2, col = "aquamarine2")
+```
+
+```{r, message=FALSE, warning=FALSE, fig.cap='Figure 5: Log-likelihood', fig.pos='h', fig.align='center'}
+###The Box-Cox likelihood suggests a power transformation with power -0.1.
+par(mfrow=c(1,2))
+bc<-MASS::boxcox(fit1, plotit = TRUE)
+library(car)
+#with(prostate, boxCox(fit1, data = prostate, main= ""))
+with(prostate, boxCox(fit1, data = prostate, main= "", lambda = seq(-0.25, 0.25, length = 10))) #zoomed in
+(lambda <- bc$x[which.max(bc$y)]) #optimal lambda
+```
+
+```{r, fig.cap='Figure 6: Histograms of PSA Level Transformations', fig.pos='h', fig.align='center'}
+##psa_level transformation 
+ggp0 <- ggplot(prostate, aes(x = psa_level^(-0.1))) + xlab("Histogram of psa_level^(-0.1))") +
+    geom_histogram(aes(y = ..density..), bins = 30, fill = "gold", color = "white") + 
+                stat_function(fun = dnorm,
+                args = list(mean = mean(prostate$psa_level^(-0.1)),
+                            sd = sd(prostate$psa_level^(-0.1))),
+                col = "grey40",
+                size = 0.5)
+ggp7 <- ggplot(prostate, aes(x = log(psa_level))) + xlab("Histogram of log(psa_level)") +
+    geom_histogram(aes(y = ..density..),bins = 30, fill = "rosybrown", color = "white") +
+                stat_function(fun = dnorm,
+                args = list(mean = mean(log(prostate$psa_level)),
+                            sd = sd(log(prostate$psa_level))),
+                col = "grey40",
+                size = 0.5)
+#Plot 2 - Cancer Volume
+ggp8<-ggplot(prostate, aes(x = sqrt(psa_level))) + xlab("Histogram of sqrt(psa_level)") +
+    geom_histogram(aes(y = ..density..),bins = 30, fill = "springgreen", color = "white")+
+                stat_function(fun = dnorm,
+                args = list(mean = mean(sqrt(prostate$psa_level)),
+                            sd = sd(sqrt(prostate$psa_level))),
+                col = "grey40",
+                size = 0.5) 
+#Plot 3 - Weight
+ggp9<-ggplot(prostate, aes(x = 1/psa_level)) + xlab("Histogram of 1/psa_level") +
+    geom_histogram(aes(y = ..density..),bins = 30, fill = "darkmagenta", color = "white")  +
+                stat_function(fun = dnorm,
+                args = list(mean = mean(1/prostate$psa_level),
+                            sd = sd(1/prostate$psa_level)),
+                col = "grey40",
+                size = 0.5) 
+myplots2 <- list(ggp0,ggp7, ggp8, ggp9) 
+multiplot(plotlist = myplots2, cols = 2)
+```
+
+```{r, fig.cap='Figure 7', fig.pos='h', fig.align='center'}
+##Based on Figure 6, the best transformation is log(psa_level) 
+prostate$psa_level<-log(prostate$psa_level)
+
+##Model diagnostic - after variable transformation 
+fit2 <-lm(psa_level~., data=prostate) #first-order model with the (transformed) variable
+par(mfrow=c(2,2))
+plot(fit2,pch =20, cex = 2, col = "aquamarine2")
+```
+
+
+```{r, warning = FALSE, message = FALSE, fig.cap='Figure 8: Correlation Plot I', fig.pos='h', fig.align='center'}
+##scatter plot matrix among quantitative variables with the lower panel showing correlation
+# Correlation panel
+panel.cor <- function(x, y) {
+    #usr <- par('usr') on.exit(par(usr))
+    par(usr = c(0, 1, 0, 1))
+    r <- round(cor(x, y, use = "complete.obs"), 2)
+    txt <- paste0("R = ", r)
+    cex.cor <- 0.8/strwidth(txt)
+    text(0.5, 0.5, txt, cex = cex.cor * r)
+}
+
+# Customize upper panel
+upper.panel<-function(x, y){
+  #my_cols <- c("#00AFBB", "#E7B800", "#FC4E07") 
+  points(x,y, pch = 19, col = "red")
+}
+
+# Create the plots
+pairs(~psa_level + cancer_vol + weight + age + benign_prostatic_hyperplasia + capsular_penetration, data = prostate,lower.panel = panel.cor, upper.panel = upper.panel)
+```
+
+```{r, warning = FALSE, message = FALSE, fig.cap='Figure 9: Correlation Plot II', fig.pos='h', fig.align='center'}
+##Scatter plot 2
+library(ggplot2)
+library(GGally)
+library(dplyr)
+#p <- ggpairs(dat_psa)
+# put scatterplots on top so y axis is vertical
+(p <- ggpairs(prostate %>% select(psa_level, cancer_vol, weight, age, benign_prostatic_hyperplasia, capsular_penetration)
+            #, upper = list(continuous = wrap("points", alpha = 0.2, size = 0.5))
+            , aes(color = prostate$seminal_vesicle_invasion)
+            , upper = list(continuous = "points")
+            , lower = list(continuous = "cor")
+            ))
+```
+
+```{r, warning=FALSE, message=FALSE, fig.cap='Table 5: Pairwise correlation matrix', fig.align='left', fig.width=2, fig.height=4}
+##Pairwise correlation matrix for all quantitative variables
+quantitative<-c('cancer_vol','weight','age','benign_prostatic_hyperplasia' , 'capsular_penetration')
+c <-cor(prostate[,c("psa_level",quantitative)], use = "pairwise.complete.obs")
+corr_df<-as.data.frame(c)
+library(formattable)
+library(kableExtra)
+#as.datatable(formattable(corr_df, list(area(col = c(psa_level, cancer_vol, weight, age, benign_prostatic_hyperplasia, capsular_penetration)) ~ color_tile("white", "orange"))), rownames = TRUE, options = list(pageLength = 6, scrollX=T))
+
+for(i in 1:nrow(corr_df)) corr_df[i,] <- color_tile("white", "orange")(corr_df[i,])
+
+corr_df %>%
+  kable(escape = F) %>%
+  kable_styling(full_width = F, latex_options="scale_down")%>% scroll_box(width = "100%")
+```
+*Table 5: Pairwise correlation matrix*
+
+```{r, warning=FALSE, message=FALSE, fig.cap='Figure 10: PSA Level: Side-by-Side Boxplot by Gleason Score (Left) and Seminal Vesicle Invasion (Right)', fig.align='center'}
+
+##side-by-side box plots for ”PSA” with respect to each categorical variable
+fig4 <- plot_ly(prostate, y = ~psa_level, color = ~gleason_score, type = "box")
+fig5 <- plot_ly(prostate, y = ~psa_level, color = ~seminal_vesicle_invasion, type = "box")
+
+# subplot
+(fig6 <- subplot(fig4, fig5, nrows = 1))
+#fig6 <- fig6 %>% layout(title = "PSA Level: Side-by-Side Boxplot by Gleason Score (Left) and Seminal Vesicle Invasion (Right)")
+```
+
+```{r, warning=FALSE, message=FALSE, fig.cap='Figure 11: PSA Level Distribution', fig.align='center'}
+##plot the distribution of PSA level 
+##by seminal invasion in using kernel density plots
+ggp7<-ggplot(prostate, 
+       aes(x = psa_level, 
+           fill = seminal_vesicle_invasion)) +
+  geom_density(alpha = 0.4) +
+  labs(title = "PSA Level distribution by Seminal Vesicle Invasion")
+ggp8<-ggplot(prostate, 
+       aes(x = psa_level, 
+           fill = gleason_score)) +
+  geom_density(alpha = 0.4) +
+  labs(title = "PSA Level distribution by Gleason Score")
+
+myplots1 <- list(ggp7, ggp8) 
+multiplot(plotlist = myplots1, cols = 1)
+```
+
+**Observation(s):**
+
+- PSA level increases from low to high gleason score and from absence to presence of seminal vesicle invasion 
+
+- There are no obvious nonlinearity 
+
+- The Box-Cox likelihood suggests a power transformation with power -0.1 which produces similar results as log transformation of response variable so we can use either one 
+
+- R-squared increases from Model 1 to Model 2 after log transformation
+
+***
+
+##  Part II: Multiple Regression with Categorical Variables
+
+- Response variable: psa_level
+- Predictor variables: cancer_vol, weight, age, benign_prostatic_hyperplasia, seminal_vesicle_invasion, capsular_penetration, gleason_score 
+- Objective: Fit model with interactions and compare the two models using the function anova() and determine which variables are not significant 
+
+
+```{r, fig.cap='Figure 12: Model 1'}
+##Preliminary Model Fitting
+summary(fit1) #model with all predictors (non-transformed psa_level) from Part I
+```
+
+```{r, fig.cap='Figure 13: Model 2'}
+##Preliminary Model Fitting
+summary(fit2) #model with all predictors (transformed psa_level) from part I
+```
+
+**Observation(s):**
+
+- First order model (fit2 - includes all predictors): $\beta_2$, $\beta_3$, and $\beta_6$ are not significant 
+
+$H_0:\beta_2=0~~vs.~~H_a:\beta_2\neq0,~T^*=0.687, ~Under H_0, T^*\sim t_{(88)}, p-value=0.494$
+$H_0:\beta_3=0~~vs.~~H_a:\beta_3\neq0,~T^*=-0.238, ~Under H_0, T^*\sim t_{(88)}, p-value=0.813$
+$H_0:\beta_6=0~~vs.~~H_a:\beta_6\neq0,~T^*=-0.804 , ~Under H_0, T^*\sim t_{(88)}, p-value=0.424$
+
+- Log transformation of response variable increased $R^2$
+
+
+```{r}
+##Check for multicollinearity in this data
+
+##Variance inflation factors VIF_k
+#Obtain R-squared_k by regressing X_k to {X_j : 1≤j not equal to k≤4} (k = 1, 2, 3, 4)
+(vif_1 <- 1/(1-(summary(lm(cancer_vol~weight+age+benign_prostatic_hyperplasia+capsular_penetration, data = prostate))$r.squared)))
+
+(vif_2 <- 1/(1-(summary(lm(weight~cancer_vol+age+benign_prostatic_hyperplasia+capsular_penetration, data = prostate))$r.squared)))
+
+(vif_3 <- 1/(1-(summary(lm(age~cancer_vol+weight+benign_prostatic_hyperplasia+capsular_penetration, data = prostate))$r.squared)))
+
+(vif_4 <- 1/(1-(summary(lm(benign_prostatic_hyperplasia~cancer_vol+weight+age+capsular_penetration, data = prostate))$r.squared)))
+
+(vif_5 <- 1/(1-(summary(lm(capsular_penetration~cancer_vol+weight+age+ benign_prostatic_hyperplasia, data = prostate))$r.squared)))
+```
+
+
+**Observation(s):**
+
+- All five VIF values are a higher than 1 and far less than 10, so we can conclude that there is not much multicollinearity in the model
+
+```{r, fig.cap='Figure 12'}
+##First order model with significant X variables
+fit3a <- lm(psa_level~ cancer_vol + benign_prostatic_hyperplasia + seminal_vesicle_invasion , data=prostate)
+summary(fit3a)
+
+fit3aa <- lm(psa_level~ cancer_vol + benign_prostatic_hyperplasia + seminal_vesicle_invasion +gleason_score, data=prostate)
+summary(fit3aa)
+
+##Model with two-way interactions (significant predictors)
+drops1=c("weight", "age", "capsular_penetration")
+pd=prostate[,!(names(prostate)%in%drops1)]
+fit3b <- lm(psa_level~ .^2, data=pd)
+summary(fit3b)
+
+##Model with two-way interactions 
+fit3b <- lm(psa_level~ .^2, data=prostate)
+summary(fit3b)
+
+fit3 <- lm(psa_level~ cancer_vol + benign_prostatic_hyperplasia + seminal_vesicle_invasion + gleason_score+ cancer_vol:benign_prostatic_hyperplasia + cancer_vol:seminal_vesicle_invasion + cancer_vol:gleason_score, data=prostate)
+summary(fit3)
+
+##Polynomial Model
+fit4 <- lm(psa_level~ cancer_vol + benign_prostatic_hyperplasia + seminal_vesicle_invasion + gleason_score+cancer_vol:benign_prostatic_hyperplasia+I(cancer_vol^2)+I(benign_prostatic_hyperplasia^2), data=prostate)
+summary(fit4)
+
+par(mfrow = c(4, 2))
+plot(fit1, which = 1, pch =20, cex = 2, col = "aquamarine2")
+plot(fit2, which = 1, pch =20, cex = 2, col = "olivedrab1")
+plot(fit3a, which = 1, pch =20, cex = 2, col = "goldenrod")
+plot(fit3aa, which = 1, pch =20, cex = 2, col = "aquamarine2")
+plot(fit3b, which = 1, pch =20, cex = 2, col = "dodgerblue")
+plot(fit3, which = 1, pch =20, cex = 2, col = "coral")
+plot(fit4, which = 1, pch =20, cex = 2, col = "orchid")
+```
+
+
+***
+
+## Part III: Model building and model selection
+
+The goal of model building and model selection part is to determine the best predictive 
+model for PSA Level and to verify whether the best model produced by the previous step is the similar to the best model produced by using criterion in the best subsets selection method. First, a first-order model with all 7 predictors for transformed PSA level is 
+examined. Based on this, prostate weight, patient age, and capsular penetration are 
+dropped from the model and considered to have no statistical significance. The Variance 
+Inflation Factor (VIF) for the quantitative predictor variables (cancer volume, weight, age, 
+benign prostatic hyperplasia, and capsular penetration) are higher than 1 and far less than 10, 
+so it can be concluded that there is no substantial multicollinearity in the model. The multiple 
+coefficients of determination $R^2$ of the first order model is moderately good (59%). A first-order model with two-way interactions and all predictors is also fitted and resulted in a fairly large  $R^2$ (73.6%). However, this model includes various nuisance variables and interactions that are not statistically significant. The original data is then randomly split into training and validation datasets to be used in the next steps that follow to prevent the resulting model from overfitting and to accurately evaluate the models. 
+
+
+```{r, fig.cap='Figure 13'}
+###split data into two halves (training and validation)
+set.seed(10)
+n <- nrow(prostate)/2
+ind <- sample(1:(2*n), n, replace=FALSE)
+prostate.t <- prostate[ind, ] #training set
+prostate.v <- prostate[-ind, ] #validation/test set
+
+
+###Draw side-by-side boxplots for PSA and other variables, in training data and validation data, respectively to see if they have similar distributions in these two sets
+
+par(mfrow=c(2,3))
+for (col_name in c('psa_level', 'cancer_vol', 'weight',
+'age', 'benign_prostatic_hyperplasia', 'capsular_penetration')){
+boxplot(prostate.t[, col_name],prostate.v[, col_name],main=col_name,names=c('training','validation'), col=c("coral","lightblue"))
+}
+```
+
+**Observation(s):**
+
+- The training data and validation data appear to have similar distributions. 
+
+
+### I. Best Subsets Regression
+
+The primary goal of this step is to identify the best model according to each criterion: $SSE_p$,$R^2_p$, $R^2_{a,p}$, $C_p$, $AIC_p$,$BIC_p$. The Best Subsets Regression method is used to verify whether the reduced model with 
+statistically significant predictor variables identified in the preceding step where a first-order 
+model with all predictor variables is fitted will be the same as the “best” model identified 
+through this step. The “best” model according to sum of squared estimates of errors (SSE) and 
+multiple coefficient of determination $R^2$ is the full model with all seven predictors while the 
+“best” model using adjusted-$R^2$ included some predictors (cancer volume, benign prostatic hyperplasia, seminal vesicle invasion1, gleason score7, and gleason score8). Using Mallows’s Cp, Akaike information criterion (AIC), and Bayesian information criterion (BIC), the “best” model includes cancer volume, benign prostatic hyperplasia, seminal vesicle invasion1, and 
+gleason score8. The Cp, AIC, and BIC values for this model are 3.72, -34.79, and -25.43 
+respectively. The “best” model identified using this method is similar to the model 
+that was identified in the previous step, which includes all significant predictor variables (cancer 
+volume, benign prostatic hyperplasia, seminal vesicle invasion, and gleason score). 
+
+
+
+```{r, fig.cap='Figure 14'}
+fit5<-lm(psa_level~.,data=prostate.t)
+summary(fit5)
+length(fit5$coef) #8 regression coefficients
+anova(fit5)['Residuals',3] #MSE
+
+par(mfrow=c(2,2))
+plot(fit5,which=1:3, pch =20, cex = 2, col = "aquamarine2")
+MASS::boxcox(fit5)
+
+library(leaps)
+sub_set<-regsubsets(psa_level~.,data=prostate.t,nbest=3,nvmax=8,method="exhaustive")
+(sum_sub<-summary(sub_set))
+n <-nrow(prostate.t)
+## number of coefficients in each model: p
+p.m<-as.integer(as.numeric(rownames(sum_sub$which))+1)
+sse<-sum_sub$rss
+aic<-n*log(sse/n)+2*p.m
+bic<-n*log(sse/n)+log(n)*p.m
+res_sub<-cbind(sum_sub$which,sse,sum_sub$rsq,sum_sub$adjr2,sum_sub$cp, aic, bic)
+fit<-lm(psa_level~1,data=prostate.t) ##fit the model with only intercept
+full <- lm(psa_level ~., data = prostate.t)  #full first-order model
+full1 <- lm(psa_level~ .^2, data=prostate.t) ##full first-order model with interactions 
+sse1<-sum(fit$residuals^2)
+p<-1
+c1<-sse1/summary(full)$sigma^2 - (n - 2 * p)
+aic1<-n*log(sse1/n)+2*p
+bic1<-n*log(sse1/n)+log(n)*p
+none<-c(1,rep(0,8),sse1,0,0,c1,bic1,aic1)
+res_sub<-rbind(none,res_sub) ##combine the results with other models
+colnames(res_sub)<-c(colnames(sum_sub$which),"sse", "R^2", "R^2_a", "Cp", "aic", "bic")
+res_sub
+
+##The best model according to each criterion are extracted as follows: 
+#result.sum = summary(sub_set)
+#(criteria = data.frame(Nvar = 1:7, R2adj=result.sum$adjr2, CP=result.sum$cp, BIC=result.sum$bic))
+##Estimated best subset byeach criterion
+#(which.best.subset = data.frame(R2adj=which.max(result.sum$adjr2), CP=which.min(result.sum$cp), BIC=which.min(result.sum$bic)))
+
+(PRESS_none <- sum((fit$residuals/(1-influence(fit)$hat))^2))
+(PRESS_full <- sum((full$residuals/(1-influence(full)$hat))^2))
+
+```
+
+```{r, fig.cap='Figure 15'}
+#plot results
+p.plot <- res_sub[, 1] + res_sub[, 2] + res_sub[, 3] + res_sub[, 4] + res_sub[, 5]+ res_sub[, 6]+ res_sub[, 7]+ res_sub[, 8]
+res.sub.plot <- as.data.frame(cbind(p.plot, res_sub))
+best.plot <- res.sub.plot[c(1), ]
+par(mfrow = c(3, 2))
+plot(res.sub.plot$p.plot, res.sub.plot$`R^2`, xlab = "p", ylab = "R^2")
+lines(best.plot$p.plot, best.plot$`R^2`, lwd = 2)
+
+plot(res.sub.plot$p.plot, res.sub.plot$`R^2_a`, xlab = "p", ylab = "R^2_a")
+lines(best.plot$p.plot, best.plot$`R^2_a`, lwd = 2)
+
+plot(res.sub.plot$p.plot, res.sub.plot$Cp, xlab = "p", ylab = "Cp")
+lines(best.plot$p.plot, best.plot$Cp, lwd = 2)
+lines(best.plot$p.plot, best.plot$p.plot, col = "red")
+
+plot(res.sub.plot$p.plot, res.sub.plot$aic, xlab = "p", ylab = "aic")
+lines(best.plot$p.plot, best.plot$aic, lwd = 2)
+
+plot(res.sub.plot$p.plot, res.sub.plot$bic, xlab = "p", ylab = "bic")
+lines(best.plot$p.plot, best.plot$bic, lwd = 2)
+
+```
+
+
+
+**Observation(s):**
+
+- Best subsets selection
+- Best model according to $SSEp$: Model 8
+- Best model according to $R^2$: Model 8
+- Best model according to $R^2_{a}$: Model 5 ( cancer_vol + benign_prostatic_hyperplasia + seminal_vesicle_invasion1  + gleason_score7 + gleason_score8)
+- Best model according to $C_p$, $AIC_p$, $BIC_p$: Model 4 (cancer_vol + benign_prostatic_hyperplasia + seminal_vesicle_invasion1 + gleason_score8)
+- The box-cox log-likelihood does not suggest any power transformation since lambda~1 
+
+
+### II: Stepwise Procedure
+
+The stepwise procedure is conducted in order to determine the “best” predictive model 
+for PSA and if the resulting model would be similar to the best model identified using best subsets 
+regression. The “best” model according to all stepwise procedures used (forward, backward, and 
+bidirectional) using both AIC and BIC criterion include three predictors: cancer volume, seminal 
+vesicle invasion, and benign prostatic hyperplasia. Compare to the models generated using the 
+best subsets regression method, the “best” model using stepwise procedure does not include the 
+variable gleason score. Therefore, a model validation is needed to compare the “best” two 
+models generated by best subsets regression method and stepwise procedure in order to choose 
+the best predictive model for PSA. 
+
+
+```{r, warning=FALSE}
+library(MASS)
+n <-nrow(prostate.t)
+## forward selection based on AIC:
+(step.f<-stepAIC(fit, scope = list(upper = full, lower = ~1), direction = "forward", 
+    k = 4, trace = FALSE))
+a <- as.data.frame(step.f$anova)
+datatable(a, rownames = FALSE)
+
+(step.fa<-stepAIC(fit, scope = list(upper = full1, lower = ~1), direction = "forward", 
+    k = 4, trace = FALSE))
+b <- as.data.frame(step.fa$anova)
+datatable(b, rownames = FALSE)
+
+
+## backward elimination based on AIC
+(step.b <- stepAIC(full, scope = list(upper = full, lower = ~1), direction = "backward", 
+    k = 4, trace = FALSE))
+c <- as.data.frame(step.b$anova)
+datatable(c, rownames = FALSE)
+(step.ba <- stepAIC(full, scope = list(upper = full1, lower = ~1), direction = "backward", 
+    k = 4, trace = FALSE))
+d <- as.data.frame(step.ba$anova)
+datatable(d, rownames = FALSE)
+
+
+## forward stepwise based on AIC
+(step.fs<-stepAIC(fit, scope = list(upper = full, lower = ~1), direction = "both", 
+    k = 4, trace = FALSE))
+e <- as.data.frame(step.fs$anova)
+datatable(e, rownames = FALSE)
+(step.fsa<-stepAIC(fit, scope = list(upper = full1, lower = ~1), direction = "both", 
+    k = 4, trace = FALSE))
+f <- as.data.frame(step.fsa$anova)
+datatable(f, rownames = FALSE)
+
+
+## backward stepwise based on AIC
+(step.bs<-stepAIC(full, scope = list(upper = full, lower = ~1), direction = "both", 
+    k = 4, trace = FALSE))
+g <- as.data.frame(step.bs$anova)
+datatable(g, rownames = FALSE)
+(step.bsa<-stepAIC(full, scope = list(upper = full1, lower = ~1), direction = "both", 
+    k = 4, trace = FALSE))
+h <- as.data.frame(step.bsa$anova)
+datatable(h, rownames = FALSE)
+
+
+## selection based on BIC: set option 'k=log(n)'
+(step.f1<-stepAIC(fit, scope = list(upper = full, lower = ~1), direction = "forward", 
+    k = log(n), trace = FALSE))
+i <- as.data.frame(step.f1$anova)
+datatable(i, rownames = FALSE)
+(step.f1a<-stepAIC(fit, scope = list(upper = full1, lower = ~1), direction = "forward", 
+    k = log(n), trace = FALSE))
+j <- as.data.frame(step.f1a$anova)
+datatable(j, rownames = FALSE)
+(step.b1 <- stepAIC(full, scope = list(upper = full, lower = ~1), direction = "backward", 
+    k = log(n), trace = FALSE))
+k <- as.data.frame(step.b1$anova)
+datatable(k, rownames = FALSE)
+(step.b1a <- stepAIC(full, scope = list(upper = full1, lower = ~1), direction = "backward", 
+    k = log(n), trace = FALSE))
+l <- as.data.frame(step.b1a$anova)
+datatable(l, rownames = FALSE)
+(step.fs1<-stepAIC(fit, scope = list(upper = full, lower = ~1), direction = "both", 
+    k = log(n), trace = FALSE))
+m <- as.data.frame(step.fs1$anova)
+datatable(m, rownames = FALSE)
+(step.fs2<-stepAIC(fit, scope = list(upper = full1, lower = ~1), direction = "both", 
+    k = log(n), trace = FALSE))
+nn <- as.data.frame(step.fs2$anova)
+datatable(nn, rownames = FALSE)
+(step.bs1<-stepAIC(full, scope = list(upper = full1, lower = ~1), direction = "both", 
+    k = log(n), trace = FALSE))
+o <- as.data.frame(step.bs1$anova)
+datatable(o, rownames = FALSE)
+```
+
+**Observation(s):**
+
+- The "best" model according to all stepwise procedures include predictors: cancer_vol, seminal_vesicle_invasion, and benign_prostatic_hyperplasia
+
+***
+
+## Part IV: Model validation
+
+In this part, the “best” models identified using best subsets regression and stepwise 
+procedure are validated and compared. The main purpose of this part is to determine the final 
+“best” model using the following methods. First, the “best” model according to stepwise 
+procedures is used on validation data. The estimated coefficients as well as their standard 
+errors agree quite closely on the training and validation data sets Table 6. Additionally, the 
+sum of squared estimate of errors (SSE) and adjusted-$R^2$
+values are similar. Since the mean squared prediction error (MSPEv) is somewhat close to SSE dived by number of observations, 
+then there is no severe overfitting in the model. 
+
+<br>
+
+Using internal validation on the “best” models identified by best subsets regression and 
+stepwise procedure, the calculated values for the predicted residual error sum of squares (Pressp) 
+and sum of squared estimate of errors (SSEp) are somewhat close, which supports their validity, 
+which means they have little bias and not much overfitting. Meanwhile, an external 
+validation is also performed to further compare the two models. The model identified using 
+stepwise procedures has smaller mean squared prediction error using validation data (MSPEv) 
+compare to the model identified using best subsets regression. Therefore, this model is the final 
+“best” model. 
+
+
+
+```{r, fig.cap='Table 6'}
+###use best model according to stepwise procedures 
+train1 <- lm(psa_level ~ cancer_vol  + benign_prostatic_hyperplasia  + seminal_vesicle_invasion , data = prostate.t)
+# re-run model using validation data
+valid1 <- lm(psa_level ~ cancer_vol  + benign_prostatic_hyperplasia  + seminal_vesicle_invasion, data = prostate.v)
+
+mod_sum <- cbind(coef(summary(train1))[, 1], coef(summary(valid1))[, 1], coef(summary(train1))[, 
+    2], coef(summary(valid1))[, 2])
+colnames(mod_sum) <- c("Train Est", "Valid Est", "Train s.e.", "Valid s.e.")
+mod_sum1 <- as.data.frame(mod_sum)
+datatable(mod_sum1, rownames = TRUE)
+```
+
+
+```{r, fig.cap='Table 7'}
+##examine the SSE and adjusted R squares using both the training data and validation data
+sse_t <- sum(train1$residuals^2)
+sse_v <- sum(valid1$residuals^2)
+Radj_t <- summary(train1)$adj.r.squared
+Radj_v <- summary(valid1)$adj.r.squared
+train_sum <- c(sse_t,Radj_t)
+valid_sum <- c(sse_v,Radj_v)
+criteria <- rbind(train_sum,valid_sum)
+colnames(criteria) <- c("SSE","R2_adj")
+criteria1 <- as.data.frame(criteria)
+datatable(criteria1, rownames = TRUE)
+```
+
+```{r}
+#Get MSPE_v from new data
+newdata <- prostate.v[, -1]
+newdata$seminal_vesicle_invasion<-as.factor(newdata$seminal_vesicle_invasion)
+sv <-sapply(newdata, class)
+sv1<-as.data.frame(sv)
+datatable(sv1,  rownames = TRUE,colnames = "Type")
+
+
+n1 <- nrow(prostate)/2
+y.hat <- predict(train1, newdata)
+(MSPE <- mean((prostate.v$psa_level - y.hat)^2))
+sse_t/n1
+```
+
+**Observation(s):**
+
+- Most of the estimated coefficients as well as their standard errors agree quite closely on the training and validation data sets
+- The SSE and adjusted R squares values are close
+- Since $MSPE_v$ is somewhat close to $SSE/n$, then there is no severe overfitting in the model.
+
+```{r}
+##Internal validation  - 1
+(names(step.fs1$coefficients)[-1])
+modelfs1 <- lm(psa_level~cancer_vol+ benign_prostatic_hyperplasia  + seminal_vesicle_invasion , data = prostate.t)
+drops2=c("weight", "age", "capsular_penetration", "gleason-score")
+data.tt=prostate.t[,!(names(prostate)%in%drops2)]
+#data.tt<-prostate.t[ c("psa_level","cancer_vol" , "benign_prostatic_hyperplasia", "seminal_vesicle_invasion1"),  ]
+fit5<- lm (psa_level~., data = data.tt)
+length(fit5$coef) #number of coefficents in Model
+mse5<-anova(fit5)["Residuals",3]
+mse5#MSE for Model
+sse.fs1<-anova(step.fs1)["Residuals",2] #first order selected
+sse.fs1
+mse.fs1<-anova(step.fs1)["Residuals",3] #MSE for Model fs1
+mse.fs1
+p.fs1<-length(step.fs1$coefficients) #4
+p.fs1
+cp.fs1<-sse.fs1/mse5-(n-2*p.fs1) #C_p for Model fs1
+cp.fs1
+press.fs1<-sum(step.fs1$residuals^2/(1-influence(step.fs1)$hat)^2)
+press.fs1
+```
+
+```{r}
+##Internal validation -2
+###using best model according to best subset procedures based on criterion 
+model2 <- lm(psa_level~cancer_vol+ benign_prostatic_hyperplasia  + seminal_vesicle_invasion + gleason_score, data = prostate.t)
+drops2a=c("weight", "age", "capsular_penetration")
+data.tt2=prostate.t[,!(names(prostate)%in%drops2a)]
+#data.tt<-prostate.t[ c("psa_level","cancer_vol" , "benign_prostatic_hyperplasia", "seminal_vesicle_invasion1"),  ]
+fit6<- lm (psa_level~., data = data.tt2)
+length(fit6$coef) #number of coefficents in Model
+(mse6<-anova(fit6)["Residuals",3])#MSE for Model
+(sse.fs2<-anova(model2)["Residuals",2]) #first order selected
+(mse.fs2<-anova(model2)["Residuals",3]) #MSE for Model2
+(p.fs2<-length(model2$coefficients)) #5
+(cp.fs2<-sse.fs2/mse6-(n-2*p.fs2)) #C_p for Model 2
+(press.fs2<-sum(model2$residuals^2/(1-influence(model2)$hat)^2))
+```
+
+**Observation(s):**
+
+- For both models, $Cp ≈p$ and $Press_p$ and $SSE_p$ are somewhat close, which supports their
+validity: little bias and not much overfitting.
+
+```{r}
+##External  validation - 1 
+fit.fs1.v<-lm(step.fs1,data=prostate.v) #Model fs1 on validation data
+summary(step.fs1) #summary on training data
+summary(fit.fs1.v) #summary on validation data
+
+#percent change in parameter estimation
+q<-as.data.frame(round(abs(coef(step.fs1)-coef(fit.fs1.v))/abs(coef(step.fs1))*100,3))
+datatable(q, rownames = TRUE, colnames = "Percent change")
+
+sd.fs1<- summary(step.fs1)$coefficients[,"Std. Error"]
+sd.fs1.v<- summary(fit.fs1.v)$coefficients[,"Std. Error"]
+#percent change in standard errors
+p<-as.data.frame(round(abs(sd.fs1-sd.fs1.v)/sd.fs1*100,3))
+datatable(p, rownames = TRUE, colnames = "Percent change")
+
+##mean squared prediction error
+pred.fs1<-predict.lm(step.fs1, prostate.v[,-3])
+pred.fs1a<-as.data.frame(pred.fs1)
+datatable(pred.fs1a, rownames = TRUE, colnames = "Predicted values")
+
+
+mspe.fs1<-mean((pred.fs1-prostate.v[,3])^2)
+mspe.fs1
+
+press.fs1/n
+mse.fs1
+```
+
+```{r}
+##External  validation - 2 
+fit.fs2.v<-lm(model2,data=prostate.v) #Model2 on validation data
+summary(model2) #summary on training data
+summary(fit.fs2.v) #summary on validation data
+
+#percent change in parameter estimation
+r<-as.data.frame(round(abs(coef(model2)-coef(fit.fs2.v))/abs(coef(model2))*100,3))
+datatable(r, rownames = TRUE, colnames = "Percent change")
+
+
+sd.fs2<- summary(model2)$coefficients[,"Std. Error"]
+sd.fs2.v<- summary(fit.fs2.v)$coefficients[,"Std. Error"]
+#percent change in standard errors
+z<-as.data.frame(round(abs(sd.fs2-sd.fs2.v)/sd.fs2*100,3))
+datatable(z, rownames = TRUE, colnames = "Percent change")
+
+##mean squared prediction error
+pred.fs2<-predict.lm(model2, prostate.v[,-3])
+pred.fs2a<-as.data.frame(pred.fs2)
+datatable(pred.fs2a, rownames = TRUE, colnames = "Predicted values")
+
+
+(mspe.fs2<-mean((pred.fs2-prostate.v[,3])^2))
+
+(press.fs2/n)
+(mse.fs2)
+```
+
+
+**Observation(s):**
+
+- Model 1 is preferred based on smaller $MSPE_v$ and more consistent parameter estimation in training and
+validation data set
+
+
+***
+
+## Part V: Model diagnostics: Outlying and influential cases
+
+The purpose of this part of the analysis is to conduct a model diagnostic on the final 
+“best” model identified in the preceding step shown below by fitting it on the entire original data set. 
+
+<br>
+
+$$psa~level = 1.51484 +  0.07618(c𝑎𝑛𝑐𝑒𝑟 ~𝑣𝑜𝑙𝑢𝑚𝑒)$$
+$$+ 0.09971 (𝑏𝑒𝑛𝑖𝑔𝑛 ~p𝑟𝑜𝑠𝑡𝑎𝑡𝑖𝑐 ~ℎ𝑦𝑝𝑒𝑟𝑝𝑙𝑎𝑠𝑖𝑎) $$
+$$ + 0.82194 (𝑠𝑒𝑚𝑖𝑛𝑎𝑙 ~𝑣𝑒𝑠𝑖𝑐𝑙𝑒 𝑖𝑛𝑣𝑎𝑠𝑖𝑜𝑛1)$$
+<br>
+
+The multiple coefficients of determination $R^2$
+ for this model is 55%, which does not drop 
+significantly from the original model with all the 7 predictors, and is still moderately adequate. 
+In addition, the assumption of multiple regression is tested for the selected equation above. 
+The first test of normal distribution for the residuals, shown in Figure 6 (Normal Q-Q plot), 
+indicates the equation above is in fact a normal distribution with minimal outliers. Furthermore, 
+the residuals against fitted values is plotted as shown in Figure 16. The plot shows that the 
+residual against the fitted values is moderately constant but still reasonable. Comparing the 
+model diagnostic plot for the final model with three predictor variables (cancer volume, seminal 
+vesicle invasion, and benign prostatic hyperplasia) to the model diagnostic plot for the original 
+first-order model with all seven predictors (Figure 7), we can confirm that the final model is 
+better than the original model. 
+
+<br>
+
+Moreover, the studentized deleted residuals is obtained and the Bonferroni outlier test 
+procedure at α = 0.1 is used in order to identify any outlying Y and X observations in the data. 
+There are no outlying Y observations identified and the outlying X observations include cases 
+55, 64, 68, 73, 78, 86, 91, 94, and 97. Using the Cook’s distance plot (Figure 6), the potential 
+most influential case identified is the 94th case. As a result, the final model is fitted without 
+this case and the calculated average absolute difference in the fitted values between the final 
+model with and without the 94th observation is 1.87%. For 94th case, the percentage change on 
+the fitted value with or without the observation is extremely small. Therefore, it can be concluded 
+that there are no significant influential cases on the prediction and all cases can be included. 
+
+
+
+```{r, fig.cap='Figure 16'}
+final_mod <- lm(psa_level~cancer_vol+ benign_prostatic_hyperplasia + 
+    seminal_vesicle_invasion, data = prostate)
+summary(final_mod)
+fm<-as.data.frame(anova(final_mod))
+datatable(fm, rownames = TRUE)
+
+
+
+par(mfrow=c(3,2))
+plot(final_mod,pch =20, cex = 2, col = "aquamarine2")
+
+## check outliers in Y
+res<-residuals(final_mod)# residuals of the final model
+p <- length(final_mod$coefficients)
+n.s<-nrow(prostate)
+h1 <- influence(final_mod)$hat
+
+#Obtain the studentized deleted residuals and identify any outlying Y observations using
+#Bonferroni outlier test procedure at α = 0.1
+d.res.std<-studres(final_mod) #studentized deleted residuals
+qt(1-0.1/(2*n.s),n.s-p) # bonferronis thresh hold
+
+idx.Y <- as.vector(which(abs(d.res.std)>=qt(1-0.1/(2*n.s),n.s-p)))
+idx.Y ## outliers
+
+idx.X <- as.vector(which(h1>(2*p/n.s)))
+idx.X ## outliers
+
+
+plot(h1,res,xlab="leverage",ylab="residuals", pch =20, cex = 2, col = "aquamarine2")
+plot(final_mod, which=4, col = "aquamarine2") #Case 94 is an influential case according to Cook’s distance.
+
+
+#calculate the average absolute percent difference in the fitted values with and without the
+#most influential case identified 
+final_mod2<-lm(final_mod, data=prostate[-94,])
+f1<-fitted(final_mod)
+f2<-fitted(final_mod2)
+SUM<-sum(abs((f1[-94]-f2)/f1[-94]))
+SUM<-SUM+abs((f1[94]-predict(final_mod,newdata = prostate[94,]))/f1[94])
+per.average<-SUM/n.s
+per.average
+```
+
+**Observation(s):**
+
+- The potential influential case identified previously is the 94th case, we fit the model without 94th case
+and calculate the average absolute difference in the fitted values as 1.87%. For 94th case, the percentage
+change on the fitted value with or without the case is very small. Therefore, no case have a large
+influence on prediction. Hence, all cases can be retained.
+
+
+
+# **Conclusion and Discussion**
+
+By using multiple regression analyses, it can be concluded that three predictors (cancer 
+volume, seminal vesicle invasion, and benign prostatic hyperplasia) are important clinical 
+measurements that can be used in the determination of prostate-specific antigen (PSA) level 
+among men who are diagnosed with prostate cancer. However, the performance of the model that 
+is identified in this analysis to predict PSA level using these predictors can be improved. Other 
+important clinical measurements not included in the original dataset can be added to the analysis. 
+Although seminal vesicle invasion is not present in most of the 97 men with advanced prostate 
+cancer, it is still important in identifying PSA level. This supports the fact the PSA level does not 
+always imply the presence of prostate cancer in men which is a limitation of PSA screening for 
+cancer. The result of this analysis would generally not apply to every man with prostate cancer in 
+rare cases and to those who are not diagnosed with prostate cancer. Since the dataset used for this 
+analysis include a small group of men ages 41 to 79 diagnosed with prostate cancer, a larger 
+collection of data which includes both men with and without prostate cancer from a wider age 
+range might be more helpful in determining the relationship between PSA level and other clinical 
+measurements. For further analysis of this data, other statistical analysis can also be used which 
+may result in more accurate results. 
+
+<br> <br><br><br>
+
+## References 
+
+- American Cancer Society. Key Statistics for Prostate Cancer 2021. American Cancer Society. 
+Atlanta, Ga. 2021. https://www.cancer.org/cancer/prostate-cancer/about/key-statistics.html 
+
+
+- Stamey, T., Kabalin, J., McNeal, J., Johnstone, I., Freiha, F., Redwine, E. and Yang, N. (1989). 
+Prostate specific antigen in the diagnosis and treatment of adenocarcinoma of the prostate II 
+radical prostatectomy treated patients, Journal of Urology 16: 1076 – 1083. 
+
+
+- Whelan, Corey. 8 Non-Cancerous Causes of High PSA Levels. 2017. Healthline 
+https://www.healthline.com/health/mens-health/high-psa-no-cancer
+

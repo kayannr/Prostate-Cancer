@@ -1,0 +1,13 @@
+base
+knitr
+ggplot2
+rmdformats
+DT
+plotly
+carData
+car
+GGally
+dplyr
+formattable
+leaps
+MASS
