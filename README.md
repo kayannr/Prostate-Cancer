@@ -12,6 +12,6 @@ The objective of this project is to identify the association between prostate-sp
 
 - Model diagnostics: Outlying and influential cases
 
-Further details are explained in link attached below. 
+Further details are explained in the link attached below. 
 
 https://rpubs.com/kroyo/851420
