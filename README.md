@@ -14,4 +14,4 @@ The objective of this project is to identify the association between prostate-sp
 
 Further details are explained in the link attached below. 
 
-https://rpubs.com/kroyo/851420
+[Final Report](https://rpubs.com/kroyo/sta206_project)
